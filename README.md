@@ -25,81 +25,52 @@ The system focuses on:
 
 ### Phase 2 – Virality Engine (Redis)
 
-A real-time scoring system based on interactions:
-
 | Action        | Score |
 | ------------- | ----- |
 | Bot Reply     | +1    |
 | Human Like    | +20   |
 | Human Comment | +50   |
 
-* Implemented using Redis INCR for atomic updates
+* Redis INCR used for atomic updates
 * Ensures high performance and thread safety
 
 ---
 
-### Phase 2 – Constraints & Controls
+### Constraints & Controls
 
-#### Horizontal Limit
-
-* Maximum 100 bot replies per post
-* Enforced using Redis atomic counters
-
-#### Vertical Limit
-
-* Maximum comment depth = 20
-
-#### Cooldown Mechanism
-
-* Bot ↔ User interaction allowed once every 10 minutes
-* Implemented using Redis TTL keys
+* Max 100 bot replies per post (Redis counter)
+* Max comment depth = 20
+* Cooldown: Bot ↔ User interaction once per 10 minutes (Redis TTL)
 
 ---
 
-### Phase 3 – Notification Engine
+### Notification Engine
 
-#### Redis Throttling
+* Redis List used for batching notifications
+* Instant + delayed notification system
+* CRON runs every 5 minutes
 
-* If user already notified → store messages in Redis List
-* Else → send instant notification and set cooldown
-
-#### Scheduled Aggregation
-
-* CRON job runs every 5 minutes
-* Aggregates notifications:
-
+Example:
 Bot X and N others interacted with your post
 
-* Clears Redis queue after processing
-
 ---
 
-### Phase 4 – Testing & Edge Cases
+### Testing & Edge Cases
 
-#### Concurrency Testing
-
-* Simulated 200 concurrent bot requests
-* System correctly limited to 100 comments
-
-#### Stateless Architecture
-
-* No in-memory storage used
-* All state handled via Redis
-
-#### Data Integrity
-
-* Database writes occur only after Redis validation
-* Prevents invalid or excessive inserts
+* 200 concurrent requests simulated
+* System correctly capped at 100 comments
+* Stateless backend (no in-memory storage)
+* DB writes only after Redis validation
 
 ---
 
 ## Tech Stack
 
-* Backend: Spring Boot (Java 17)
-* Database: PostgreSQL (Docker)
-* Cache & Locks: Redis (Docker)
-* ORM: Spring Data JPA
-* Build Tool: Maven
+* Spring Boot (Java 17)
+* PostgreSQL (Docker)
+* Redis (Docker)
+* Spring Data JPA
+* Maven
 
 ---
 
@@ -107,37 +78,35 @@ Bot X and N others interacted with your post
 
 com.grid07_backend
 
-├── controller     # REST APIs
-├── service        # Business logic
-├── repo           # Database access
-├── model          # Entities
-├── dto            # Request/Response objects
-├── scheduler      # CRON jobs
-└── config         # Configurations
+├── controller
+├── service
+├── repo
+├── model
+├── dto
+├── scheduler
+└── config
 
 ---
 
 ## Running the Project
 
-### 1. Start Docker Services
+### 1. Start Services
 
 docker-compose up -d
-
-Services:
 
 * PostgreSQL → localhost:5433
 * Redis → localhost:6379
 
 ---
 
-### 2. Run Spring Boot App
+### 2. Run Application
 
-Run the main class:
+Run:
 Grid07BackendApplication
 
 ---
 
-### 3. API Base URL
+### 3. Base URL
 
 http://localhost:8080
 
@@ -145,14 +114,71 @@ http://localhost:8080
 
 ## API Endpoints
 
-Create Post
 POST /api/posts
-
-Add Comment
 POST /api/posts/{postId}/comments
-
-Like Post
 POST /api/posts/{postId}/like
+
+---
+
+## API Testing (Postman Collection)
+
+You can directly test all APIs using the provided Postman collection.
+
+📌 Collection includes:
+
+### 1. Create Post
+
+POST http://localhost:8080/api/posts
+
+Body:
+{
+"authorId": 1,
+"content": "Test Post"
+}
+
+---
+
+### 2. Add Human Comment
+
+POST http://localhost:8080/api/posts/1/comments
+
+Body:
+{
+"authorId": 1,
+"content": "Human comment",
+"depthLevel": 1
+}
+
+---
+
+### 3. Add Bot Comment
+
+POST http://localhost:8080/api/posts/1/comments
+
+Body:
+{
+"authorId": 1001,
+"content": "Bot comment",
+"depthLevel": 1
+}
+
+---
+
+### 4. Like Post
+
+POST http://localhost:8080/api/posts/1/like
+
+Body:
+{
+"authorId": 1,
+"content": "Human comment",
+"depthLevel": 1
+}
+
+---
+
+Full collection exported from Postman:
+
 
 ---
 
@@ -167,46 +193,42 @@ POST /api/posts/{postId}/like
 
 ---
 
-## Concurrency Test Example
+## Concurrency Test
 
 for i in {1..200}
 do
-curl -X POST http://localhost:8080/api/posts/1/comments 
--H "Content-Type: application/json" 
--d '{"authorId":1001,"content":"Bot comment","depthLevel":1}' &
+curl -X POST http://localhost:8080/api/posts/1/comments &
 done
 
-wait
-
-Expected DB result:
+Expected:
 100 comments only
 
 ---
 
 ## Design Principles
 
-* Redis as Control Layer → Handles concurrency & rate limits
-* PostgreSQL as Source of Truth → Stores final data
-* Stateless Backend → No in-memory storage
-* Atomic Operations → Prevent race conditions
+* Redis → concurrency & rate limiting
+* PostgreSQL → source of truth
+* Stateless backend
+* Atomic operations
 
 ---
 
 ## Key Learnings
 
-* Handling high concurrency using Redis
-* Designing rate-limited systems
-* Implementing distributed locks
-* Building scalable notification systems
+* High concurrency handling with Redis
+* Distributed locking
+* Rate-limited system design
+* Scalable notification batching
 
 ---
 
 ## Future Improvements
 
-* Add proper user/bot identity mapping
-* Implement authentication (JWT)
-* Introduce Kafka for event-driven notifications
-* Add pagination and feed APIs
+* JWT authentication
+* Kafka integration
+* Pagination & feed APIs
+* Real user/bot mapping
 
 ---
 
@@ -218,4 +240,4 @@ Akash Kumar
 
 ## Final Note
 
-This project demonstrates production-level backend engineering concepts including concurrency control, distributed system design, and real-time processing.
+This project demonstrates production-level backend concepts including concurrency control, distributed systems, and real-time processing.
