@@ -234,7 +234,7 @@ wait
 
 ## Author
 
-**Abhishek Kumar**
+**Akash Kumar**
 
 ---
 
